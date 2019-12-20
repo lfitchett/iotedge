@@ -161,7 +161,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Docker
             foreach (DockerStats module in modules)
             {
                 string name = module.Name.Substring(1); // remove '/' from start of name
-                var tags = new string[] { name, EdgeRuntimeModules.Contains(name).ToString() };
+                if (EdgeRuntimeModules.Contains(name))
+                {
+                    name.CreateSha256();
+                }
+                var tags = new string[] { name, true.ToString() };
 
                 this.cpuPercentage.Update(this.GetCpuUsage(module), tags);
                 this.totalMemory.Set(module.MemoryStats.Limit, tags);
