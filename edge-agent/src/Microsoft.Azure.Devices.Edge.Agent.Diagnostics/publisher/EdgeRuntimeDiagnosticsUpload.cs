@@ -4,6 +4,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics.Publisher
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
@@ -20,12 +21,27 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics.Publisher
         public EdgeRuntimeDiagnosticsUpload(IEdgeAgentConnection edgeAgentConnection)
         {
             this.edgeAgentConnection = Preconditions.CheckNotNull(edgeAgentConnection, nameof(edgeAgentConnection));
+            Console.WriteLine("Making reporting file");
+            File.AppendAllLines("/shared/size.csv", new string[] { "Timestamp,Number of Metrics,Binary Size,Gzipped Size" });
         }
 
         public async Task<bool> PublishAsync(IEnumerable<Metric> metrics, CancellationToken cancellationToken)
         {
             Preconditions.CheckNotNull(metrics, nameof(metrics));
+
+            int numMetrics = 0;
+            metrics = metrics.Select(m =>
+            {
+                numMetrics++;
+                return m;
+            });
+
             byte[] data = MetricsSerializer.MetricsToBytes(metrics).ToArray();
+            byte[] compressedData = Compression.CompressToGzip(data);
+
+            string report = $"{DateTime.Now},{numMetrics},{data.Length},{compressedData.Length}";
+            Console.WriteLine(report);
+            File.AppendAllLines("/shared/size.csv", new string[] { report });
 
             if (data.Length > 0)
             {
