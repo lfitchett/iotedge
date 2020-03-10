@@ -23,6 +23,7 @@ mod error;
 mod persist;
 mod server;
 mod session;
+mod shared_payload_format;
 mod snapshot;
 mod subscription;
 
@@ -31,6 +32,7 @@ pub use crate::connection::ConnectionHandle;
 pub use crate::error::{Error, ErrorKind};
 pub use crate::persist::{BincodeFormat, FileFormat, FilePersistor, NullPersistor, Persist};
 pub use crate::server::Server;
+pub use crate::shared_payload_format::CustomFormat;
 pub use crate::snapshot::{Snapshotter, StateSnapshotHandle};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
