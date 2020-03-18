@@ -1,0 +1,22 @@
+{
+    "host": "localhost",
+    "port": "1883",
+    "topic": "eclipse/iot/tesware/0",
+    "clients": [
+        {
+            "clientid": "123-456-789",
+            "username": "IoTester_1",
+            "password": "strong_password"
+        },
+        {
+            "clientid": "987-654-321",
+            "username": "IoTester_2",
+            "password": "strong_password"
+        }
+    ],
+    "testcases": [
+        "MQTT_TestCases.TC_MQTT_BROKER_CONNECT_001",
+        "MQTT_TestCases.TC_MQTT_BROKER_CONNECT_002",
+        "MQTT_TestCases.TC_MQTT_BROKER_CONNECT_003"
+    ]
+}
