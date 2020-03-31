@@ -1,7 +1,9 @@
 use std::any::type_name;
 use std::collections::{HashMap, VecDeque};
+use std::io::Cursor;
 use std::iter::FromIterator;
 
+use async_trait::async_trait;
 use bytes::Bytes;
 use criterion::*;
 use mqtt3::proto::{Publication, QoS};
@@ -179,3 +181,38 @@ fn bench(c: &mut Criterion) {
 
 criterion_group!(basic, bench);
 criterion_main!(basic);
+
+#[derive(Debug)]
+pub struct BufferPersistor<F> {
+    format: F,
+    buffer: Vec<u8>,
+}
+
+impl<F> BufferPersistor<F> {
+    pub fn new(format: F) -> Self {
+        Self {
+            format,
+            buffer: vec![0_u8; 10 * 1024 * 1024],
+        }
+    }
+}
+
+#[async_trait]
+impl<F> Persist for BufferPersistor<F>
+where
+    F: FileFormat + Clone + Send + 'static,
+{
+    type Error = F::Error;
+
+    async fn load(&mut self) -> Result<Option<BrokerState>, Self::Error> {
+        let reader = Cursor::new(&mut self.buffer);
+
+        Ok(Some(self.format.load(reader)?))
+    }
+
+    async fn store(&mut self, state: BrokerState) -> Result<(), Self::Error> {
+        let writer = Cursor::new(&mut self.buffer);
+
+        self.format.store(writer, state)
+    }
+}
