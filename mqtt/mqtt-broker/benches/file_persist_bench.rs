@@ -6,8 +6,9 @@ use bytes::Bytes;
 use criterion::*;
 use mqtt3::proto::{Publication, QoS};
 use mqtt_broker::{
-    BincodeFormat, BrokerState, ClientId, CompressedConsolidatedStateFormat,
-    ConsolidatedStateFormat, FileFormat, FilePersistor, Persist, SessionState,
+    BincodeFormat, BrokerState, ClientId, CompressedBincodeFormat,
+    CompressedConsolidatedStateFormat, ConsolidatedStateFormat, FileFormat, FilePersistor, Persist,
+    SessionState,
 };
 use tempfile::TempDir;
 use tokio::runtime::Runtime;
@@ -165,12 +166,13 @@ fn bench(c: &mut Criterion) {
                     test_read(c, *clients, *unique, *shared, *retained, $f);
                 )*
             }};
-        }p
+        }
 
         test_formats![
             ConsolidatedStateFormat::default(),
             CompressedConsolidatedStateFormat::default(),
-            BincodeFormat::default()
+            BincodeFormat::default(),
+            CompressedBincodeFormat::default()
         ]
     }
 }

@@ -119,6 +119,25 @@ impl FileFormat for BincodeFormat {
     type Error = Error;
 
     fn load<R: Read>(&self, reader: R) -> Result<BrokerState, Self::Error> {
+        let state = bincode::deserialize_from(reader)
+            .context(ErrorKind::Persist(ErrorReason::Deserialize))?;
+        Ok(state)
+    }
+
+    fn store<W: Write>(&self, writer: W, state: BrokerState) -> Result<(), Self::Error> {
+        bincode::serialize_into(writer, &state)
+            .context(ErrorKind::Persist(ErrorReason::Serialize))?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct CompressedBincodeFormat;
+
+impl FileFormat for CompressedBincodeFormat {
+    type Error = Error;
+
+    fn load<R: Read>(&self, reader: R) -> Result<BrokerState, Self::Error> {
         let decoder = GzDecoder::new(reader);
         fail_point!("bincodeformat.load.deserialize_from", |_| {
             Err(Error::from(ErrorKind::Persist(ErrorReason::Deserialize)))
