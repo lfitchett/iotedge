@@ -146,6 +146,29 @@ impl FileFormat for ConsolidatedStateFormat {
     type Error = Error;
 
     fn load<R: Read>(&self, reader: R) -> Result<BrokerState, Self::Error> {
+        let state: ConsolidatedState = bincode::deserialize_from(reader)
+            .context(ErrorKind::Persist(ErrorReason::Deserialize))?;
+
+        let state: BrokerState = state.into();
+        Ok(state)
+    }
+
+    fn store<W: Write>(&self, writer: W, state: BrokerState) -> Result<(), Self::Error> {
+        let state: ConsolidatedState = state.into();
+
+        bincode::serialize_into(writer, &state)
+            .context(ErrorKind::Persist(ErrorReason::Serialize))?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct CompressedConsolidatedStateFormat;
+
+impl FileFormat for CompressedConsolidatedStateFormat {
+    type Error = Error;
+
+    fn load<R: Read>(&self, reader: R) -> Result<BrokerState, Self::Error> {
         let decoder = GzDecoder::new(reader);
         fail_point!("bincodeformat.load.deserialize_from", |_| {
             Err(Error::from(ErrorKind::Persist(ErrorReason::Deserialize)))

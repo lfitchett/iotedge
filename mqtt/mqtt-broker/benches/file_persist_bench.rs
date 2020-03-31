@@ -6,8 +6,8 @@ use bytes::Bytes;
 use criterion::*;
 use mqtt3::proto::{Publication, QoS};
 use mqtt_broker::{
-    BincodeFormat, BrokerState, ClientId, ConsolidatedStateFormat, FileFormat, FilePersistor,
-    Persist, SessionState,
+    BincodeFormat, BrokerState, ClientId, CompressedConsolidatedStateFormat,
+    ConsolidatedStateFormat, FileFormat, FilePersistor, Persist, SessionState,
 };
 use tempfile::TempDir;
 use tokio::runtime::Runtime;
@@ -150,7 +150,7 @@ fn make_random_payload(size: u32) -> Bytes {
 }
 
 fn bench(c: &mut Criterion) {
-    let tests = vec![
+    let tests = &[
         (1, 1, 0, 0),
         (10, 10, 10, 10),
         (10, 100, 0, 0),
@@ -158,24 +158,20 @@ fn bench(c: &mut Criterion) {
     ];
 
     for (clients, unique, shared, retained) in tests {
-        test_write(
-            c,
-            clients,
-            unique,
-            shared,
-            retained,
-            ConsolidatedStateFormat::new(),
-        );
-        test_write(c, clients, unique, shared, retained, BincodeFormat::new());
-        test_read(
-            c,
-            clients,
-            unique,
-            shared,
-            retained,
-            ConsolidatedStateFormat::new(),
-        );
-        test_read(c, clients, unique, shared, retained, BincodeFormat::new());
+        macro_rules! test_formats {
+            ( $( $f:expr ),* ) => {{
+                $(
+                    test_write(c, *clients, *unique, *shared, *retained, $f);
+                    test_read(c, *clients, *unique, *shared, *retained, $f);
+                )*
+            }};
+        }p
+
+        test_formats![
+            ConsolidatedStateFormat::default(),
+            CompressedConsolidatedStateFormat::default(),
+            BincodeFormat::default()
+        ]
     }
 }
 
