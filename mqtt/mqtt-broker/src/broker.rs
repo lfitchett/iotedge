@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::{panic, thread};
 
 use crossbeam_channel::{Receiver, Sender};
@@ -334,7 +335,8 @@ where
                     session.send(event)?;
                 }
 
-                self.publish_all(StateChange::new_connection(&self.sessions).into())?;
+                let change = StateChange::new_connection(&self.sessions);
+                self.publish_change(change);
             }
             Err(SessionError::DuplicateSession(mut old_session, ack)) => {
                 // Drop the old connection
@@ -457,8 +459,8 @@ where
                 publish_to(&self.authorizer, session, &publication)?;
             }
 
-            let message = StateChange::new_subscription(client_id, &session).into();
-            self.publish_all(message)?;
+            let change = StateChange::new_subscription(client_id, &session);
+            self.publish_change(change);
         } else {
             debug!("no session for {}", client_id);
         }
@@ -476,8 +478,8 @@ where
                 let unsuback = session.unsubscribe(unsubscribe)?;
                 session.send(ClientEvent::UnsubAck(unsuback))?;
 
-                let notify_message = StateChange::new_subscription(client_id, &session).into();
-                self.publish_all(notify_message)?;
+                let change = StateChange::new_subscription(client_id, &session);
+                self.publish_change(change);
 
                 Ok(())
             }
@@ -716,8 +718,7 @@ where
                     Session::new_transient(auth_id, connreq)
                 };
 
-                let subscription_change =
-                    StateChange::new_subscription(&client_id, &new_session).into();
+                let subscription_change = StateChange::new_subscription(&client_id, &new_session);
                 self.sessions.insert(client_id.clone(), new_session);
 
                 let ack = proto::ConnAck {
@@ -726,9 +727,8 @@ where
                 };
                 let events = vec![];
 
-                self.publish_all(StateChange::new_session(&self.sessions).into())
-                    .unwrap();
-                self.publish_all(subscription_change).unwrap();
+                self.publish_change(StateChange::new_session(&self.sessions));
+                self.publish_change(subscription_change);
 
                 Ok((ack, events))
             }
@@ -794,12 +794,9 @@ where
         match self.sessions.remove(client_id) {
             Some(Session::Transient(connected)) => {
                 info!("closing transient session for {}", client_id);
-                self.publish_all(StateChange::new_connection(&self.sessions).into())
-                    .unwrap();
-                self.publish_all(StateChange::new_session(&self.sessions).into())
-                    .unwrap();
-                self.publish_all(StateChange::clear_subscriptions(client_id).into())
-                    .unwrap();
+                self.publish_change(StateChange::new_connection(&self.sessions));
+                self.publish_change(StateChange::new_session(&self.sessions));
+                self.publish_change(StateChange::clear_subscriptions(client_id));
 
                 let (auth_id, _state, will, handle) = connected.into_parts();
                 Some(Session::new_disconnecting(
@@ -815,8 +812,7 @@ where
                 // to be sent on the connection
 
                 info!("moving persistent session to offline for {}", client_id);
-                self.publish_all(StateChange::new_connection(&self.sessions).into())
-                    .unwrap();
+                self.publish_change(StateChange::new_connection(&self.sessions));
 
                 let (auth_id, state, will, handle) = connected.into_parts();
                 let new_session = Session::new_offline(state);
@@ -880,6 +876,19 @@ where
         }
 
         Ok(())
+    }
+
+    fn publish_change(&mut self, change: StateChange<'_>) {
+        match change.try_into() {
+            Ok(publication) => {
+                self.publish_all(publication).unwrap_or_else(|e| {
+                    error!("Error publishing state change message: {}", e);
+                });
+            }
+            Err(e) => {
+                error!("Error converting state change to a message: {}", e);
+            }
+        }
     }
 }
 
@@ -1922,8 +1931,8 @@ pub(crate) mod tests {
             payload: Bytes::new(),
         };
 
-        let notify_message = Message::Client(client_id.clone(), ClientEvent::PublishFrom(publish));
-        broker_handle.send(notify_message).unwrap();
+        let message = Message::Client(client_id.clone(), ClientEvent::PublishFrom(publish));
+        broker_handle.send(message).unwrap();
 
         assert_matches!(
             rx.recv().await,
