@@ -729,7 +729,7 @@ where
                 self.publish_all(StateChange::new_session(&self.sessions).into())
                     .unwrap();
                 self.publish_all(subscription_change).unwrap();
-                
+
                 Ok((ack, events))
             }
         }

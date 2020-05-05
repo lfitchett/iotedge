@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::iter::FromIterator;
 
 use mqtt3::proto;
+use serde::Serialize;
 use tracing::error;
 
 use crate::session::Session;
@@ -64,7 +64,7 @@ impl<'a> From<StateChange<'a>> for proto::Publication {
         match state {
             StateChange::Subscriptions(client_id, subscriptions) => {
                 let payload = if let Some(subscriptions) = subscriptions {
-                    get_message_body(subscriptions.into_iter()).into()
+                    get_message_body(subscriptions).into()
                 } else {
                     "".into()
                 };
@@ -80,13 +80,13 @@ impl<'a> From<StateChange<'a>> for proto::Publication {
                 topic_name: "$edgehub/connected".to_owned(),
                 qos: STATE_CHANGE_QOS,
                 retain: true,
-                payload: get_message_body(connections.iter().map(|c| c.as_str())).into(),
+                payload: get_message_body(connections).into(),
             },
             StateChange::Sessions(sessions) => proto::Publication {
                 topic_name: "$edgehub/sessions".to_owned(),
                 qos: STATE_CHANGE_QOS,
                 retain: true,
-                payload: get_message_body(sessions.iter().map(|c| c.as_str())).into(),
+                payload: get_message_body(sessions).into(),
             },
         }
     }
@@ -94,10 +94,8 @@ impl<'a> From<StateChange<'a>> for proto::Publication {
 
 fn get_message_body<'a, P>(payload: P) -> String
 where
-    P: IntoIterator<Item = &'a str>,
+    P: Serialize,
 {
-    let payload: Vec<&str> = Vec::from_iter(payload);
-
     serde_json::to_string(&payload).unwrap_or_else(|e| {
         error!("Json Error: {}", e);
         "".to_owned()
