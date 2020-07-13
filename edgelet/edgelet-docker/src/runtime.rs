@@ -18,9 +18,10 @@ use docker::apis::client::APIClient;
 use docker::apis::configuration::Configuration;
 use docker::models::{ContainerCreateBody, InlineResponse200, Ipam, NetworkConfig};
 use edgelet_core::{
-    AuthId, Authenticator, GetTrustBundle, Ipam as CoreIpam, LogOptions, MakeModuleRuntime,
-    MobyNetwork, Module, ModuleId, ModuleRegistry, ModuleRuntime, ModuleRuntimeState, ModuleSpec,
-    RegistryOperation, RuntimeOperation, SystemInfo as CoreSystemInfo, SystemResources, UrlExt,
+    version, AuthId, Authenticator, GetTrustBundle, Ipam as CoreIpam, LogOptions,
+    MakeModuleRuntime, MobyNetwork, Module, ModuleId, ModuleRegistry, ModuleRuntime,
+    ModuleRuntimeState, ModuleSpec, RegistryOperation, RuntimeOperation,
+    SystemInfo as CoreSystemInfo, SystemResources, UrlExt,
 };
 use edgelet_http::{Pid, UrlConnector};
 use edgelet_utils::{ensure_not_empty_with_context, log_failure};
@@ -319,6 +320,7 @@ impl ModuleRuntime for DockerModuleRuntime {
     type SystemInfoFuture = Box<dyn Future<Item = CoreSystemInfo, Error = Self::Error> + Send>;
     type SystemResourcesFuture =
         Box<dyn Future<Item = SystemResources, Error = Self::Error> + Send>;
+    type SystemMetadataFuture = Box<dyn Future<Item = String, Error = Self::Error> + Send>;
     type RemoveAllFuture = Box<dyn Future<Item = (), Error = Self::Error> + Send>;
 
     fn create(&self, module: ModuleSpec<Self::Config>) -> Self::CreateFuture {
@@ -602,6 +604,14 @@ impl ModuleRuntime for DockerModuleRuntime {
                     }
                 }),
         )
+    }
+
+    fn system_metadata(&self) -> Self::SystemMetadataFuture {
+        info!("Getting system metadata");
+
+        let ver: String = version().into();
+
+        Box::new(future::ok(ver))
     }
 
     fn system_resources(&self) -> Self::SystemResourcesFuture {

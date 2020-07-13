@@ -167,6 +167,7 @@ impl ModuleRuntime for ModuleClient {
     type SystemInfoFuture = Box<dyn Future<Item = CoreSystemInfo, Error = Self::Error> + Send>;
     type SystemResourcesFuture =
         Box<dyn Future<Item = SystemResources, Error = Self::Error> + Send>;
+    type SystemMetadataFuture = Box<dyn Future<Item = String, Error = Self::Error> + Send>;
     type RemoveAllFuture = Box<dyn Future<Item = (), Error = Self::Error> + Send>;
 
     fn create(&self, _module: ModuleSpec<Self::Config>) -> Self::CreateFuture {

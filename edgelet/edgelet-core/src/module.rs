@@ -500,6 +500,7 @@ pub trait ModuleRuntime: Sized {
     type StopFuture: Future<Item = (), Error = Self::Error> + Send;
     type SystemInfoFuture: Future<Item = SystemInfo, Error = Self::Error> + Send;
     type SystemResourcesFuture: Future<Item = SystemResources, Error = Self::Error> + Send;
+    type SystemMetadataFuture: Future<Item = String, Error = Self::Error> + Send;
     type RemoveAllFuture: Future<Item = (), Error = Self::Error> + Send;
 
     fn create(&self, module: ModuleSpec<Self::Config>) -> Self::CreateFuture;
@@ -510,6 +511,7 @@ pub trait ModuleRuntime: Sized {
     fn remove(&self, id: &str) -> Self::RemoveFuture;
     fn system_info(&self) -> Self::SystemInfoFuture;
     fn system_resources(&self) -> Self::SystemResourcesFuture;
+    fn system_metadata(&self) -> Self::SystemMetadataFuture;
     fn list(&self) -> Self::ListFuture;
     fn list_with_details(&self) -> Self::ListWithDetailsStream;
     fn logs(&self, id: &str, options: &LogOptions) -> Self::LogsFuture;

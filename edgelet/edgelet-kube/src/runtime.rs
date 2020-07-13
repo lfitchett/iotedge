@@ -259,6 +259,11 @@ where
         )))
     }
 
+    fn system_metadata(&self) -> Self::SystemMetadataFuture {
+        // TODO: add support for system metadata on k8s
+        "".into();
+    }
+
     fn list(&self) -> Self::ListFuture {
         let result = self
             .client
