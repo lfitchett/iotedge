@@ -36,7 +36,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
                 .As<IMetricsListener>()
                 .SingleInstance();
 
-            builder.RegisterType<MetadataMetrics>().SingleInstance();
+            builder.Register(c => new MetadataMetrics(c.Resolve<IMetricsProvider>(), c.Resolve<Edgelet.IModuleManager>().GetSystemMetadataAsync))
+                .As<MetadataMetrics>()
+                .SingleInstance();
 
             base.Load(builder);
         }

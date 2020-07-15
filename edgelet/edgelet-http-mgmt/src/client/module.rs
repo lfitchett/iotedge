@@ -259,6 +259,10 @@ impl ModuleRuntime for ModuleClient {
         unimplemented!()
     }
 
+    fn system_metadata(&self) -> Self::SystemMetadataFuture {
+        unimplemented!()
+    }
+
     fn list(&self) -> Self::ListFuture {
         let modules = self
             .client

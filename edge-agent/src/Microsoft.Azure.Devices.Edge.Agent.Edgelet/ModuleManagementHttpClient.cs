@@ -51,6 +51,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet
 
         public Task<SystemResources> GetSystemResourcesAsync() => this.inner.GetSystemResourcesAsync();
 
+        public Task<string> GetSystemMetadataAsync() => this.inner.GetSystemMetadataAsync();
+
         public Task<IEnumerable<ModuleRuntimeInfo>> GetModules<T>(CancellationToken token) => this.inner.GetModules<T>(token);
 
         public Task PrepareUpdateAsync(ModuleSpec moduleSpec) => this.inner.PrepareUpdateAsync(moduleSpec);
@@ -81,6 +83,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet
             if (supportedVersion == ApiVersion.Version20191105)
             {
                 return new Version_2019_11_05.ModuleManagementHttpClient(managementUri);
+            }
+
+            if (supportedVersion == ApiVersion.Version20200707)
+            {
+                return new Version_2020_07_07.ModuleManagementHttpClient(managementUri);
             }
 
             return new Version_2018_06_28.ModuleManagementHttpClient(managementUri);

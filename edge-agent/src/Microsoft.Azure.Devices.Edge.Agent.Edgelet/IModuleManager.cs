@@ -30,6 +30,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet
 
         Task<SystemResources> GetSystemResourcesAsync();
 
+        Task<string> GetSystemMetadataAsync();
+
         Task<IEnumerable<ModuleRuntimeInfo>> GetModules<T>(CancellationToken token);
 
         Task PrepareUpdateAsync(ModuleSpec moduleSpec);
