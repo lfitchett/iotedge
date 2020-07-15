@@ -343,6 +343,7 @@ where
     type StopFuture = FutureResult<(), Self::Error>;
     type SystemInfoFuture = FutureResult<SystemInfo, Self::Error>;
     type SystemResourcesFuture = FutureResult<SystemResources, Self::Error>;
+    type SystemMetadataFuture = FutureResult<String, Self::Error>;
     type RemoveAllFuture = FutureResult<(), Self::Error>;
 
     fn create(&self, _module: ModuleSpec<Self::Config>) -> Self::CreateFuture {
@@ -414,6 +415,13 @@ where
                 )],
                 "fake docker stats".to_owned(),
             )),
+            Err(ref e) => future::err(e.clone()),
+        }
+    }
+
+    fn system_metadata(&self) -> Self::SystemMetadataFuture {
+        match self.module.as_ref().unwrap() {
+            Ok(_) => future::ok("Fake Metadata".into()),
             Err(ref e) => future::err(e.clone()),
         }
     }

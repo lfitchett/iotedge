@@ -162,6 +162,7 @@ where
     type SystemInfoFuture = Box<dyn Future<Item = SystemInfo, Error = Self::Error> + Send>;
     type SystemResourcesFuture =
         Box<dyn Future<Item = SystemResources, Error = Self::Error> + Send>;
+    type SystemMetadataFuture = Box<dyn Future<Item = String, Error = Self::Error> + Send>;
     type RemoveAllFuture = Box<dyn Future<Item = (), Error = Self::Error> + Send>;
 
     fn create(&self, module: ModuleSpec<Self::Config>) -> Self::CreateFuture {
@@ -261,7 +262,7 @@ where
 
     fn system_metadata(&self) -> Self::SystemMetadataFuture {
         // TODO: add support for system metadata on k8s
-        "".into();
+        Box::new(future::ok("".into()))
     }
 
     fn list(&self) -> Self::ListFuture {

@@ -40,15 +40,15 @@ where
             .runtime
             .system_metadata()
             .then(|system_metadata| -> Result<_, Error> {
-                // let body = serde_json::to_string(&system_metadata).context(
-                //     ErrorKind::RuntimeOperation(RuntimeOperation::SystemResources),
-                // )?;
+                let body = system_metadata.context(ErrorKind::RuntimeOperation(
+                    RuntimeOperation::SystemMetadata,
+                ))?;
 
                 let response = Response::builder()
                     .status(StatusCode::OK)
                     .header(CONTENT_TYPE, "text/plain; charset=utf-8")
                     .header(CONTENT_LENGTH, body.len().to_string().as_str())
-                    .body(system_metadata.into())
+                    .body(body.into())
                     .context(ErrorKind::RuntimeOperation(
                         RuntimeOperation::SystemResources,
                     ))?;
