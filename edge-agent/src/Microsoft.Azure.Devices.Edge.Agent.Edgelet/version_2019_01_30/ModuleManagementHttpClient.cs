@@ -197,6 +197,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2019_01_30
             return Task.FromResult<SystemResources>(null);
         }
 
+        public override Task<string> GetSystemMetadataAsync()
+        {
+            return Task.FromResult(string.Empty);
+        }
+
         protected override void HandleException(Exception exception, string operation)
         {
             switch (exception)

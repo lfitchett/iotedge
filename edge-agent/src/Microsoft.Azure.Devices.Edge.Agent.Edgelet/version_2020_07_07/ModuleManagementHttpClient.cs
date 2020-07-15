@@ -1,5 +1,5 @@
 // Copyright (c) Microsoft. All rights reserved.
-namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2019_11_05
+namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2020_07_07
 {
     using System;
     using System.Collections.Generic;
@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2019_11_05
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Agent.Core;
-    using Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2019_11_05.GeneratedCode;
+    using Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2020_07_07.GeneratedCode;
     using Microsoft.Azure.Devices.Edge.Agent.Edgelet.Versioning;
     using Microsoft.Azure.Devices.Edge.Util;
     using Microsoft.Azure.Devices.Edge.Util.Edged;
@@ -144,6 +144,15 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2019_11_05
             }
         }
 
+        public override async Task<string> GetSystemMetadataAsync()
+        {
+            using (HttpClient httpClient = HttpClientHelper.GetHttpClient(this.ManagementUri))
+            {
+                var edgeletHttpClient = new EdgeletHttpClient(httpClient) { BaseUrl = HttpClientHelper.GetBaseUrl(this.ManagementUri) };
+                return await this.Execute(() => edgeletHttpClient.GetSystemMetadataAsync(this.Version.Name), $"Get Metadata");
+            }
+        }
+
         public override async Task<IEnumerable<ModuleRuntimeInfo>> GetModules<T>(CancellationToken cancellationToken)
         {
             using (HttpClient httpClient = HttpClientHelper.GetHttpClient(this.ManagementUri))
@@ -208,11 +217,6 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2019_11_05
                 var edgeletHttpClient = new EdgeletHttpClient(httpClient) { BaseUrl = HttpClientHelper.GetBaseUrl(this.ManagementUri) };
                 await this.Execute(() => edgeletHttpClient.ReprovisionDeviceAsync(this.Version.Name), "reprovision the device");
             }
-        }
-
-        public override Task<string> GetSystemMetadataAsync()
-        {
-            return Task.FromResult(string.Empty);
         }
 
         protected override void HandleException(Exception exception, string operation)
