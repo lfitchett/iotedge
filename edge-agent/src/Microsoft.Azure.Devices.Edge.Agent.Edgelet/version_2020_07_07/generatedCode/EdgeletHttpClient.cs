@@ -10,6 +10,7 @@
 
 namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2020_07_07.GeneratedCode
 {
+    using System;
     using System = global::System;
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.6.2.0 (NJsonSchema v10.1.23.0 (Newtonsoft.Json v11.0.0.0))")]
@@ -1452,8 +1453,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Version_2020_07_07.Generate
                         var status_ = ((int)response_.StatusCode).ToString();
                         if (status_ == "200")
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_).ConfigureAwait(false);
-                            return objectResponse_.Object;
+                            return await response_.Content.ReadAsStringAsync();
                         }
                         else
                         {

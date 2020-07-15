@@ -29,9 +29,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Metrics
         public async Task Start(ILogger logger, string agentVersion, string experimentalFeatures)
         {
             logger.LogInformation("Collecting metadata metrics");
-            Console.WriteLine("\n\n\n");
             string edgeletVersion = await this.getSystemMetadata();
-            Console.WriteLine("\n\n\n");
 
             string[] values = { agentVersion, experimentalFeatures, edgeletVersion, true.ToString() };
             this.metaData.Set(0, values);
