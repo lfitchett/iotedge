@@ -69,10 +69,12 @@ pub enum OutputFormat {
 /// The various ways a check can resolve.
 ///
 /// Check functions return `Result<CheckResult, failure::Error>` where `Err` represents the check failed.
-#[derive(Debug)]
+// #[derive(Debug)]
 pub enum CheckResult {
     /// Check succeeded.
     Ok,
+
+    OkFuture(Box<dyn Future<Item = (), Error = failure::Error>>),
 
     /// Check failed with a warning.
     Warning(failure::Error),
@@ -310,7 +312,7 @@ impl Check {
         Ok(())
     }
 
-    fn execute_inner(&mut self) -> Result<(), Error> {
+    fn execute_inner(&mut self) -> impl Future<Item = (), Error = Error> {
         let mut checks: BTreeMap<&str, CheckOutputSerializable> = Default::default();
         let mut check_data = Check::checks();
 
@@ -348,6 +350,25 @@ impl Check {
 
                 match check_result {
                     CheckResult::Ok => {
+                        num_successful += 1;
+
+                        checks.insert(
+                            check_id,
+                            CheckOutputSerializable {
+                                result: CheckResultSerializable::Ok,
+                                additional_info: check.get_json(),
+                            },
+                        );
+
+                        stdout.write_success(|stdout| {
+                            writeln!(stdout, "\u{221a} {} - OK", check_name)?;
+                            Ok(())
+                        });
+                    }
+
+                    CheckResult::OkFuture(result_future) => {
+                        result_future.await;
+
                         num_successful += 1;
 
                         checks.insert(
@@ -579,10 +600,10 @@ impl Check {
 }
 
 impl crate::Command for Check {
-    type Future = FutureResult<(), Error>;
+    type Future = Future<Item = (), Error = Error>;
 
     fn execute(mut self) -> Self::Future {
-        self.execute_inner().into_future()
+        self.execute_inner()
     }
 }
 
