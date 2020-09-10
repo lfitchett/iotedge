@@ -117,9 +117,11 @@ namespace RqtNumbersTesting
                     };
                 }
             );
+
+            this.metricSources = moduleIndependentMetrics.Concat(EhModuleDependentMetrics).Concat(EhRouteMetrics).Concat(EaModuleDependentMetrics).ToArray();
         }
 
-        public IEnumerable<Metric> GenerateDailyMetrics(int numScrapes, TimeSpan scrapeFrequency)
+        public IEnumerable<Metric> GenerateDailyMetrics(TimeSpan scrapeFrequency)
         {
             for (DateTime time = DateTime.UtcNow; time < DateTime.UtcNow.AddDays(1); time += scrapeFrequency)
             {
