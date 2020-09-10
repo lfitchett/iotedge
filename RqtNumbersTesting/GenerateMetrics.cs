@@ -14,10 +14,16 @@ namespace RqtNumbersTesting
     {
         IMetricSource[] metricSources;
 
-        public MetricsGenerator(int numModules, int numIntermoduleRoutes)
+        public MetricsGenerator(int numModules, int numRoutes)
         {
             var moduleIndependentMetrics = new IMetricSource[]
             {
+                new GenericGuage("edgeAgent_command_latency_seconds", true, 1, 100, ("command", "create")),
+                new GenericGuage("edgeAgent_command_latency_seconds", true, 1, 100, ("command", "update")),
+                new GenericGuage("edgeAgent_command_latency_seconds", true, 1, 100, ("command", "remove")),
+                new GenericGuage("edgeAgent_command_latency_seconds", true, 1, 100, ("command", "start")),
+                new GenericGuage("edgeAgent_command_latency_seconds", true, 1, 100, ("command", "stop")),
+                new GenericGuage("edgeAgent_command_latency_seconds", true, 1, 100, ("command", "restart")),
                 new GenericGuage("edgeAgent_iothub_syncs_total", true, 1, 100),
                 new GenericGuage("edgeAgent_unsuccessful_iothub_syncs_total", true, 1, 100),
                 new GenericGuage("edgeAgent_deployment_time_seconds", true, 1, 1000000000),
@@ -42,10 +48,18 @@ namespace RqtNumbersTesting
                     new GenericGuage("edgehub_gettwin_total", true, 1, 100, ("source", "edgehub"), ("id", $"device1/modules/{moduleName}")),
                     new GenericGuage("edgehub_messages_received_total", true, 1, 100, ("route_output", "output1"), ("id", $"device1/modules/{moduleName}")),
                     new GenericGuage("edgehub_reported_properties_total", true, 1, 100, ("target", "asdfasdf"), ("id", $"device1/modules/{moduleName}")),
+                    new GenericHistogram("edgehub_message_size_bytes", true, 1, 100, ("id", $"device1/modules/{moduleName}")),
+                    new GenericHistogram("edgehub_gettwin_duration_seconds", true, 1, 100, ("source", "edgehub"), ("id", $"device1/modules/{moduleName}")),
+                    new GenericHistogram("edgehub_reported_properties_update_duration_seconds", false, 1, 100, ("target", "edgehub"), ("id", $"device1/modules/{moduleName}")),
+                    new GenericGuage("edgehub_offline_count_total", false, 1, 100, ("id", $"device1/modules/{moduleName}")),
+                    new GenericHistogram("edgehub_offline_duration_seconds", false, 1, 100, ("id", $"device1/modules/{moduleName}")),
+                    new GenericGuage("edgehub_operation_retry_total", false, 1, 100, ("id", $"device1/modules/{moduleName}")),
+                    new GenericGuage("edgehub_client_connect_failed_total", false, 1, 100, ("id", $"device1/modules/{moduleName}")),
                 }
             );
 
-            var EhIntermoduleMetrics = Enumerable.Range(1, numModules).SelectMany(i => 
+            // edgeAgent metrics with cardnality number of routes
+            var EhRouteMetrics = Enumerable.Range(1, numRoutes).SelectMany(i =>
                  new IMetricSource[]
                  {
                     new GenericGuage("edgehub_messages_sent_total", true, 1, 100,
@@ -54,13 +68,69 @@ namespace RqtNumbersTesting
                         ("from_route_output", "A"),
                         ("to_route_input", "B"),
                         ("priority", "1")),
-
+                    new GenericHistogram("edgehub_message_send_duration_seconds", true, 1, 100,
+                        ("from", $"module_A_{i}"),
+                        ("to", $"module_B_{i}"),
+                        ("from_route_output", "A"),
+                        ("to_route_input", "B")),
+                    new GenericHistogram("edgehub_message_process_duration_seconds", true, 1, 100,
+                        ("from", $"module_A_{i}"),
+                        ("to", $"module_B_{i}"),
+                        ("priority", "1")),
+                    new GenericHistogram("edgehub_direct_method_duration_seconds", false, 1, 100,
+                        ("from", $"module_A_{i}"),
+                        ("to", $"module_B_{i}")),
+                    new GenericGuage("edgehub_direct_methods_total", true, 1, 100,
+                        ("from", $"module_A_{i}"),
+                        ("to", $"module_B_{i}")),
+                    new GenericGuage("edgehub_queue_length", true, 1, 100,
+                        ("endpoint", $"module_{i}"),
+                        ("priority", "1")),
+                    new GenericGuage("edgehub_messages_dropped_total", true, 1, 100,
+                        ("from", $"module_A_{i}"),
+                        ("from_route_output", "A"),
+                        ("reason", "bad")),
                  }
              );
+
+            // edgeAgent metrics with cardnality number of modules
+            string[] systemModules = { "$edgeHub", "$edgeAgent" };
+            var EaModuleDependentMetrics = Enumerable.Range(1, numModules).Select(i => $"module_{i}")
+                .Concat(systemModules)
+                .SelectMany(moduleName =>
+                {
+                    bool isSystem = systemModules.Contains(moduleName);
+                    return new IMetricSource[]
+                    {
+                        new GenericGuage("edgeAgent_total_time_running_correctly_seconds", isSystem, 1, 1000000, ("module_name", moduleName)),
+                        new GenericGuage("edgeAgent_total_time_expected_running_seconds", isSystem, 1, 1000000, ("module_name", moduleName)),
+                        new GenericGuage("edgeAgent_module_start_total", isSystem, 1, 1000000, ("module_name", moduleName), ("module_version", "")),
+                        new GenericGuage("edgeAgent_module_stop_total", isSystem, 1, 1000000, ("module_name", moduleName), ("module_version", "")),
+                        new GenericGuage("edgeAgent_used_memory_bytes", isSystem, 1, 1000000, ("module_name", moduleName)),
+                        new GenericGuage("edgeAgent_total_memory_bytes", isSystem, 1, 1000000, ("module_name", moduleName)),
+                        new GenericHistogram("edgeAgent_used_cpu_percent", isSystem, 1, 1000000, ("module_name", moduleName)),
+                        new GenericGuage("edgeAgent_created_pids_total", false, 1, 1000000, ("module_name", moduleName)),
+                        new GenericGuage("edgeAgent_total_network_in_bytes", false, 1, 1000000, ("module_name", moduleName)),
+                        new GenericGuage("edgeAgent_total_network_out_bytes", false, 1, 1000000, ("module_name", moduleName)),
+                        new GenericGuage("edgeAgent_total_disk_read_bytes", false, 1, 1000000, ("module_name", moduleName)),
+                        new GenericGuage("edgeAgent_total_disk_write_bytes", false, 1, 1000000, ("module_name", moduleName)),
+                    };
+                }
+            );
         }
 
-        public IEnumerable<Metric> GenerateMetrics(int numScrapes)
+        public IEnumerable<Metric> GenerateDailyMetrics(int numScrapes, TimeSpan scrapeFrequency)
         {
+            for (DateTime time = DateTime.UtcNow; time < DateTime.UtcNow.AddDays(1); time += scrapeFrequency)
+            {
+                foreach (IMetricSource metricSource in this.metricSources)
+                {
+                    foreach (Metric metric in metricSource.GetNext(time))
+                    {
+                        yield return metric;
+                    }
+                }
+            }
 
         }
     }
@@ -97,6 +167,42 @@ namespace RqtNumbersTesting
         public IEnumerable<Metric> GetNext(DateTime dateTime)
         {
             return new Metric[] { new Metric(dateTime, this.name, random.Next(min, max), this.tags) };
+        }
+    }
+
+    class GenericHistogram : IMetricSource
+    {
+        string name;
+        int min;
+        int max;
+        Dictionary<string, string> tags;
+
+        Random random = new Random();
+
+        public GenericHistogram(string name, bool msTelemetry, int min, int max, params (string tag, string value)[] tags)
+        {
+            this.name = name;
+            this.min = min;
+            this.max = max;
+
+            this.tags = tags.ToDictionary(t => t.tag, t => t.value);
+            this.tags.Add(MetricsConstants.MsTelemetry, msTelemetry.ToString());
+            this.tags.Add("iothub", "testhub.fakecustomer.net");
+            this.tags.Add("edge_device", "device1");
+            this.tags.Add("instance_number", "7da7f05c-8d32-4500-b23a-f0ca59b5294d");
+        }
+
+        public IEnumerable<Metric> GetNext(DateTime dateTime)
+        {
+            foreach (string quantile in new string[] { "0.1", "0.5", "0.9", "0.99" })
+            {
+                this.tags["quantile"] = quantile;
+                yield return new Metric(dateTime, this.name, random.Next(min, max), new ReadOnlyDictionary<string, string>(this.tags));
+            }
+
+            this.tags.Remove("quantile");
+            yield return new Metric(dateTime, $"{this.name}_count", random.Next(min, max), new ReadOnlyDictionary<string, string>(this.tags));
+            yield return new Metric(dateTime, $"{this.name}_sum", random.Next(min, max), new ReadOnlyDictionary<string, string>(this.tags));
         }
     }
 }
