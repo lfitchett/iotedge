@@ -5,6 +5,9 @@ using System;
 using System.Linq;
 using Microsoft.Azure.Devices.Edge.Util;
 using Microsoft.Azure.Devices.Edge.Agent.Diagnostics;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 
 namespace RqtNumbersTesting
 {
@@ -12,6 +15,20 @@ namespace RqtNumbersTesting
     {
         static void Main(string[] args)
         {
+            BasicTest();
+            //var frequencies = new double[] { 24, 12, 6, 3, 1, .5, .25 }.Select(TimeSpan.FromHours);
+            //GenerateCsv(@"C:\Users\Lee\Downloads\rqt.csv", Enumerable.Range(0, 200), Enumerable.Range(1, 205), frequencies);
+        }
+
+        static void BasicTest()
+        {
+            void PrintStats(string description, Metric[] metrics)
+            {
+                byte[] serialized = MetricsSerializer.MetricsToBytes(metrics).ToArray();
+                byte[] compressed = Compression.CompressToGzip(serialized);
+                Console.WriteLine($"{description}\n\tNumber of metrics:\t\t{metrics.Length}\n\tBytes after serialization:\t{serialized.Length}\n\tBytes after compression:\t{compressed.Length}");
+            }
+
             var generator = new MetricsGenerator(5, 6);
 
             var metrics = generator.GenerateDailyMetrics(TimeSpan.FromHours(1)).ToArray();
@@ -24,11 +41,31 @@ namespace RqtNumbersTesting
             PrintStats("After Aggregating", metrics);
         }
 
-        static void PrintStats(string description, Metric[] metrics)
+        static void GenerateCsv(string path, IEnumerable<int> numModules, IEnumerable<int> numRoutes, IEnumerable<TimeSpan> scrapeFrequencies)
         {
-            byte[] serialized = MetricsSerializer.MetricsToBytes(metrics).ToArray();
-            byte[] compressed = Compression.CompressToGzip(serialized);
-            Console.WriteLine($"{description}\n\tNumber of metrics:\t\t{metrics.Length}\n\tBytes after serialization:\t{serialized.Length}\n\tBytes after compression:\t{compressed.Length}");
+            using (var file = new StreamWriter(File.Open(path, FileMode.OpenOrCreate)))
+            {
+                file.WriteLine($"Number of Modules,Number of Routes,Scrape Frequency,Metrics Collected,Metrics after Filtering,Metrics after Aggregating,Serialized Bytes,Compressed Bytes");
+
+                foreach (int modules in numModules)
+                {
+                    foreach (int routes in numRoutes)
+                    {
+                        var generator = new MetricsGenerator(modules, routes);
+
+                        foreach (TimeSpan freq in scrapeFrequencies)
+                        {
+                            Metric[] metrics = generator.GenerateDailyMetrics(freq).ToArray();
+                            Metric[] filtered = metricFilter.TransformMetrics(metrics).ToArray();
+                            Metric[] aggregated = metricAggregator.AggregateMetrics(filtered).ToArray();
+                            byte[] serialized = MetricsSerializer.MetricsToBytes(aggregated).ToArray();
+                            byte[] compressed = Compression.CompressToGzip(serialized);
+
+                            file.WriteLine($"{modules},{routes},{freq.TotalHours},{metrics.Length},{filtered.Length},{aggregated.Length},{serialized.Length},{compressed.Length}");
+                        }
+                    }
+                }
+            }
         }
 
         static MetricTransformer metricFilter = new MetricTransformer()
