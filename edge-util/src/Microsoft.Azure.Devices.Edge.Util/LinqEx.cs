@@ -103,6 +103,15 @@ namespace Microsoft.Azure.Devices.Edge.Util
         {
             return (await Task.WhenAll(source.Select(selector))).SelectMany(s => s);
         }
+
+        public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> source)
+        {
+            await Task.Yield();
+            foreach (T item in source)
+            {
+                yield return item;
+            }
+        }
     }
 
     class StringKeyComparer : IEqualityComparer<string>

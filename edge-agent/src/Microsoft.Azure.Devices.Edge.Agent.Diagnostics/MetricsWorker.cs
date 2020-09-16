@@ -22,7 +22,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics
 
     public class MetricsWorker : IDisposable
     {
-        public static RetryStrategy RetryStrategy = new ExponentialBackoff(20, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(1), false);
+        public static RetryStrategy RetryStrategy = new ExponentialBackoff(20, TimeSpan.FromMinutes(5), TimeSpan.FromHours(12), TimeSpan.FromMinutes(1), false);
 
         readonly IMetricsScraper scraper;
         readonly IMetricsStorage storage;
@@ -122,13 +122,13 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics
             using (await this.scrapeUploadLock.LockAsync(cancellationToken))
             {
                 Log.LogInformation("Scraping Metrics");
-                IEnumerable<Metric> scrapedMetrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken);
+                IAsyncEnumerable<Metric> scrapedMetrics = this.scraper.ScrapeEndpointsAsync(cancellationToken);
 
-                scrapedMetrics = this.metricFilter.TransformMetrics(scrapedMetrics);
-                scrapedMetrics = this.metricAggregator.AggregateMetrics(scrapedMetrics);
+                scrapedMetrics = this.metricFilter.TransformMetricsAsync(scrapedMetrics);
+                scrapedMetrics = this.metricAggregator.AggregateMetricsAsync(scrapedMetrics);
 
                 Log.LogInformation("Storing Metrics");
-                await this.storage.StoreMetricsAsync(scrapedMetrics);
+                await this.storage.StoreMetricsAsync(scrapedMetrics, cancellationToken);
                 Log.LogInformation("Scraped and Stored Metrics");
             }
         }
@@ -146,7 +146,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics
             using (await this.scrapeUploadLock.LockAsync(cancellationToken))
             {
                 Log.LogInformation($"Uploading Metrics");
-                IEnumerable<Metric> metricsToUpload = (await this.storage.GetAllMetricsAsync()).CondenseTimeSeries();
+                IEnumerable<Metric> metricsToUpload = await this.storage.GetAllMetricsAsync(cancellationToken).ToListAsync();
 
                 try
                 {

@@ -8,6 +8,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics
     using System.Linq;
     using System.Net;
     using System.Net.Http;
+    using System.Runtime.CompilerServices;
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
@@ -39,14 +40,19 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics
             this.systemTime = systemTime ?? SystemTime.Instance;
         }
 
-        public Task<IEnumerable<Metric>> ScrapeEndpointsAsync(CancellationToken cancellationToken)
+        public async IAsyncEnumerable<Metric> ScrapeEndpointsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            return this.endpoints.SelectManyAsync(async endpoint =>
+            foreach (string endpoint in this.endpoints)
             {
                 Log.LogInformation($"Scraping endpoint {endpoint}");
                 string metricsData = await this.ScrapeEndpoint(endpoint, cancellationToken);
-                return PrometheusMetricsParser.ParseMetrics(this.systemTime.UtcNow, metricsData);
-            });
+                IEnumerable<Metric> metrics = PrometheusMetricsParser.ParseMetrics(this.systemTime.UtcNow, metricsData);
+
+                foreach (Metric metric in metrics)
+                {
+                    yield return metric;
+                }
+            }
         }
 
         public void Dispose()

@@ -7,6 +7,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics.Storage
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -25,31 +26,31 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics.Storage
             this.systemTime = systemTime ?? SystemTime.Instance;
         }
 
-        public Task StoreMetricsAsync(IEnumerable<Metric> metrics)
+        public Task StoreMetricsAsync(IAsyncEnumerable<Metric> metrics, CancellationToken cancellationToken)
         {
-            return this.WriteData(JsonConvert.SerializeObject(metrics));
+            return this.WriteData(JsonConvert.SerializeObject(metrics.ToListAsync(cancellationToken)), cancellationToken);
         }
 
-        public Task<IEnumerable<Metric>> GetAllMetricsAsync()
+        public async IAsyncEnumerable<Metric> GetAllMetricsAsync([EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            return Directory.GetFiles(this.directory)
-                .OrderBy(filename => filename)
-                .SelectManyAsync<string, Metric>(async filename =>
+            var files = Directory.GetFiles(this.directory).OrderBy(filename => filename);
+            foreach (string filename in files)
+            {
+                try
                 {
-                    Metric[] fileMetrics;
-                    try
-                    {
-                        string rawMetrics = await DiskFile.ReadAllAsync(filename);
-                        fileMetrics = JsonConvert.DeserializeObject<Metric[]>(rawMetrics) ?? new Metric[0];
-                        this.filesToDelete.Add(filename);
-                    }
-                    catch
-                    {
-                        fileMetrics = new Metric[0];
-                    }
+                    string rawMetrics = await DiskFile.ReadAllAsync(filename);
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                    return fileMetrics;
-                });
+                    foreach (Metric metric in JsonConvert.DeserializeObject<Metric[]>(rawMetrics) ?? Enumerable.Empty<Metric>())
+                    {
+                        yield return metric;
+                    }
+                }
+                finally
+                {
+                    this.filesToDelete.Add(filename);
+                }
+            }
         }
 
         public async Task RemoveAllReturnedMetricsAsync()
@@ -63,11 +64,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics.Storage
             this.filesToDelete.Clear();
         }
 
-        Task WriteData(string data)
+        Task WriteData(string data, CancellationToken cancellationToken)
         {
             Directory.CreateDirectory(this.directory);
             string file = Path.Combine(this.directory, this.systemTime.UtcNow.Ticks.ToString());
 
+            cancellationToken.ThrowIfCancellationRequested();
             return DiskFile.WriteAllAsync(file, data);
         }
     }

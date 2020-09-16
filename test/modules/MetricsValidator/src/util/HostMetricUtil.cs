@@ -17,7 +17,7 @@ namespace MetricsValidator.Util
 
             for (int i = 0; i < maxWaitTime / frequency; i++)
             {
-                if ((await scraper.ScrapeEndpointsAsync(cancellationToken)).Any(m => m.Name == "edgeAgent_used_cpu_percent" && m.Tags["module_name"] != "host"))
+                if (await scraper.ScrapeEndpointsAsync(cancellationToken).AnyAsync(m => m.Name == "edgeAgent_used_cpu_percent" && m.Tags["module_name"] != "host"))
                 {
                     return true;
                 }

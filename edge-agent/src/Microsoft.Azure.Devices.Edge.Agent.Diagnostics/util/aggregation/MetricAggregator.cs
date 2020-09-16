@@ -6,7 +6,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics.Util.Aggregation
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Akka.Event;
     using Microsoft.Azure.Devices.Edge.Util;
     using Newtonsoft.Json;
@@ -25,23 +28,23 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics.Util.Aggregation
         }
 
         // Will aggregate all metrics for all aggregtion templates
-        public IEnumerable<Metric> AggregateMetrics(IEnumerable<Metric> metrics)
+        public IAsyncEnumerable<Metric> AggregateMetricsAsync(IAsyncEnumerable<Metric> metrics)
         {
             // Aggregate is way overused in this class, but this Aggregate function is from linq
             return this.metricsToAggregate.Aggregate(metrics, this.AggregateMetric);
         }
 
         // Will aggregate metrics for a single aggregation template
-        IEnumerable<Metric> AggregateMetric(IEnumerable<Metric> metrics, AggregationTemplate aggregation)
+        IAsyncEnumerable<Metric> AggregateMetric(IAsyncEnumerable<Metric> metrics, AggregationTemplate aggregation)
         {
             return aggregation.TagsToAggregate.Aggregate(metrics, (m, tagAggregation) => this.AggregateTag(m, aggregation.TargetMetricNames, tagAggregation.targetTag, tagAggregation.aggregator));
         }
 
         // Will aggregate metrics for a single tag of a single template
-        IEnumerable<Metric> AggregateTag(IEnumerable<Metric> metrics, IEnumerable<string> targetMetricNames, string targetTag, IAggregator aggregator)
+        async IAsyncEnumerable<Metric> AggregateTag(IAsyncEnumerable<Metric> metrics, IEnumerable<string> targetMetricNames, string targetTag, IAggregator aggregator, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var aggregateValues = new DefaultDictionary<AggregateMetric, IAggregator>(_ => aggregator.New());
-            foreach (Metric metric in metrics)
+            await foreach (Metric metric in metrics.WithCancellation(cancellationToken))
             {
                 // if metric is the aggregation target and it has a tag that should be aggregated
                 if (targetMetricNames.Contains(metric.Name) && metric.Tags.ContainsKey(targetTag))

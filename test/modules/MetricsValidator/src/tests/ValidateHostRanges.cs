@@ -24,7 +24,7 @@ namespace MetricsValidator.Tests
         {
             await HostMetricUtil.WaitForHostMetrics(this.scraper, cancellationToken);
 
-            List<Metric> metrics = (await this.scraper.ScrapeEndpointsAsync(cancellationToken)).ToList();
+            List<Metric> metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken).ToListAsync();
             this.CheckCPU(metrics);
             this.CheckMemory(metrics);
         }

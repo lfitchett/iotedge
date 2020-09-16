@@ -225,7 +225,7 @@ namespace MetricsValidator.Tests
          * *****************************************************************************/
         async Task<int> GetNumberOfMessagesRecieved(CancellationToken cancellationToken, string endpoint)
         {
-            var metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken);
+            var metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken).ToListAsync();
             Metric metric = metrics.FirstOrDefault(m => m.Name == "edgehub_messages_received_total" && m.Tags.TryGetValue("route_output", out string output) && output == endpoint);
 
             return (int?)metric?.Value ?? 0;
@@ -233,7 +233,7 @@ namespace MetricsValidator.Tests
 
         async Task<int> GetNumberOfMessagesSent(CancellationToken cancellationToken, string endpoint)
         {
-            var metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken);
+            var metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken).ToListAsync();
             Metric metric = metrics.FirstOrDefault(m => m.Name == "edgehub_messages_sent_total" && m.Tags.TryGetValue("from_route_output", out string output) && output == endpoint);
 
             return (int?)metric?.Value ?? 0;
@@ -241,7 +241,7 @@ namespace MetricsValidator.Tests
 
         async Task<int> GetQueueLength(CancellationToken cancellationToken, string endpoint)
         {
-            var metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken);
+            var metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken).ToListAsync();
             Metric metric = metrics.FirstOrDefault(m => m.Name == "edgehub_queue_length" && m.Tags.TryGetValue("endpoint", out string output) && output.Contains(endpoint));
 
             return (int?)metric?.Value ?? 0;
@@ -249,7 +249,7 @@ namespace MetricsValidator.Tests
 
         async Task<Option<HistogramQuartiles>> GetMessageSize(CancellationToken cancellationToken, string moduleName = "MetricsValidator")
         {
-            var metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken);
+            IEnumerable<Metric> metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken).ToListAsync();
             metrics = metrics.Where(m => m.Tags["id"].Contains(moduleName));
             return HistogramQuartiles.CreateFromMetrics(metrics, "edgehub_message_size_bytes");
         }

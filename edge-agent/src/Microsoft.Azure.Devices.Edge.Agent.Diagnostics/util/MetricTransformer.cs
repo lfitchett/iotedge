@@ -5,7 +5,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics.Util
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Util;
     using Newtonsoft.Json;
 
@@ -22,9 +25,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Diagnostics.Util
         Option<List<(string tag, Func<string, string> valueTransformer)>> tagsToModify = Option.None<List<(string, Func<string, string>)>>();
         Option<List<string>> tagsToRemove = Option.None<List<string>>();
 
-        public IEnumerable<Metric> TransformMetrics(IEnumerable<Metric> metrics)
+        public async IAsyncEnumerable<Metric> TransformMetricsAsync(IAsyncEnumerable<Metric> metrics, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            foreach (Metric metric in metrics)
+            await foreach (Metric metric in metrics.WithCancellation(cancellationToken))
             {
                 // Skip metric if it doesn't contain any allowed tags.
                 if (this.allowedTags.Exists(allowedTags => !allowedTags.Any(metric.Tags.Contains)))

@@ -33,7 +33,7 @@ namespace MetricsValidator.Tests
             this.testReporter.Assert("Host Metrics Found", hostMetricsFound);
 
             // scrape metrics
-            var metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken);
+            var metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken).ToListAsync();
 
             var expected = this.GetExpectedMetrics();
             if (RuntimeInformation.OSArchitecture == Architecture.Arm || RuntimeInformation.OSArchitecture == Architecture.Arm64)

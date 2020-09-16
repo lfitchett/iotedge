@@ -3,6 +3,7 @@ namespace MetricsCollector
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Agent.Diagnostics;
@@ -40,7 +41,7 @@ namespace MetricsCollector
         {
             try
             {
-                IEnumerable<Metric> metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken);
+                IEnumerable<Metric> metrics = await this.scraper.ScrapeEndpointsAsync(cancellationToken).ToListAsync();
                 this.additionalTags.ForEach(tags =>
                 {
                     metrics = this.GetTaggedMetrics(metrics, tags);
